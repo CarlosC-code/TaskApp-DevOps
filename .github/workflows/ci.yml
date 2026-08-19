@@ -44,3 +44,27 @@ jobs:
 
       - name: Publicar imagen en Docker Hub
         run: docker push carloscode1/taskapp:latest
+
+      - name: Iniciar aplicación para monitoreo
+        run: |
+          docker run -d -p 3000:3000 --name taskapp-monitor carloscode1/taskapp:latest
+          sleep 5
+
+      - name: Verificar Health Check
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health)
+
+          if [ "$response" -eq 200 ]; then
+            echo "Health Check OK - Aplicación funcionando correctamente"
+          else
+            echo "ALERTA: Health Check falló. Código HTTP: $response"
+            exit 1
+          fi
+
+      - name: Mostrar logs de la aplicación
+        if: always()
+        run: docker logs taskapp-monitor
+
+      - name: Detener aplicación
+        if: always()
+        run: docker rm -f taskapp-monitor
