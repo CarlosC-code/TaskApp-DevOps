@@ -1,4 +1,9 @@
 const sqlite3 = require("sqlite3").verbose();
+const fs = require("fs");
+
+if (!fs.existsSync("./data")) {
+    fs.mkdirSync("./data", { recursive: true });
+}
 
 const db = new sqlite3.Database("./data/tasks.db");
 
