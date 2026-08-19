@@ -4,13 +4,41 @@ const db = require("./database");
 
 const app = express();
 
+// Métricas básicas
+let totalRequests = 0;
+let totalErrors = 0;
+
 app.use(express.json());
+
+// Middleware de monitoreo
+app.use((req, res, next) => {
+    const start = Date.now();
+
+    totalRequests++;
+
+    res.on("finish", () => {
+        const duration = Date.now() - start;
+
+        if (res.statusCode >= 400) {
+            totalErrors++;
+        }
+
+        console.log(
+            `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms`
+        );
+    });
+
+    next();
+});
+
 app.use(express.static(path.join(__dirname, "../public")));
 
 app.get("/api/tasks", (req, res) => {
     db.all("SELECT * FROM tasks", [], (err, rows) => {
         if (err) {
-            return res.status(500).json({ error: err.message });
+            return res.status(500).json({
+                error: err.message
+            });
         }
 
         res.json(rows);
@@ -45,9 +73,21 @@ app.post("/api/tasks", (req, res) => {
     );
 });
 
+// Health check
 app.get("/health", (req, res) => {
     res.json({
-        status: "OK"
+        status: "OK",
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Métricas
+app.get("/metrics", (req, res) => {
+    res.json({
+        totalRequests,
+        totalErrors,
+        uptime: process.uptime()
     });
 });
 
